@@ -88,3 +88,7 @@ curve(approx5(x), add=TRUE, col="green")
 curve(approx7(x), add=TRUE, col="orange")
 curve(approx9(x), add=TRUE, col="purple")
 
+legend("topright", 
+       legend=c("dnorm", "He0", "He2", "He4", "He6", "He8"),
+       col=c("black", "red", "blue", "green", "orange", "purple"),
+       lty=1)
