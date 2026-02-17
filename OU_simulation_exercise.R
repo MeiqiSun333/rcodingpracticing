@@ -38,5 +38,53 @@ plot_transition_density_OU = function(paths, time_s, time_t, value_s, mu, nu, si
 
 
 
+# Make a plot of the standard normal density
+# and superimpose lines for the Hermite polynomial expansion
+# with $1, 2, ..., 5$ terms
 
+
+H0 = function(x){
+  return(rep(1, length(x)))
+}
+H2 = function(x){
+  return(x^2 - 1)
+}
+H4 = function(x){
+  return(x^4 - 6*x^2 + 3)
+}
+
+H6 = function(x){
+  return(x^6 - 15*x^4 + 45*x^2 - 15)
+}
+
+H8 = function(x){
+  return(x^8 - 28*x^6 + 210*x^4 - 420*x^2 + 105)
+}
+
+approx1 = function(x){
+  return(1/(2*sqrt(pi))*H0(x))
+}
+
+approx3 = function(x){
+  return(1/(2*sqrt(pi))*(H0(x) - H2(x)/4))
+}
+
+approx5 = function(x){
+  return(1/(2*sqrt(pi))*(H0(x) - H2(x)/4 + H4(x)/32))
+}
+
+approx7 = function(x){
+  return(1/(2*sqrt(pi))*(H0(x) - H2(x)/4 + H4(x)/32 - H6(x)/384))
+}
+
+approx9 = function(x){
+  return(1/(2*sqrt(pi))*(H0(x) - H2(x)/4 + H4(x)/32 - H6(x)/384 + H8(x)/6144))
+}
+
+curve(dnorm(x), from=-4, to=4)
+curve(approx1(x), add=TRUE, col="red")
+curve(approx3(x), add=TRUE, col="blue")
+curve(approx5(x), add=TRUE, col="green")
+curve(approx7(x), add=TRUE, col="orange")
+curve(approx9(x), add=TRUE, col="purple")
 
