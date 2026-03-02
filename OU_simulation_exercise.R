@@ -99,7 +99,7 @@ legend("topright",
 beta = 1
 sigma = 1
 delta_t = 0.5
-y0 = 0
+y0 = 0.2
 
 # mu_Y(y) = -beta*y
 # Y_{t+Δ} | Y_t=y0 ~ N(y0*exp(-beta*Δ), (1-exp(-2*beta*Δ))/(2*beta))
@@ -123,7 +123,7 @@ H6 = function(x) x^6 - 15*x^4 + 45*x^2 - 15
 
 
 eta0_3 = 1
-eta1_3 = beta*y0*delta_t^(1/2) - (1/2)*beta^2*y0*delta_t^(3/2) + (1/6)*beta^3*y0*delta_t^(5/2)  # 修正：第一项是正号
+eta1_3 = beta*y0*delta_t^(1/2) - (1/2)*beta^2*y0*delta_t^(3/2) + (1/6)*beta^3*y0*delta_t^(5/2)
 eta2_3 = ((beta*y0^2-1)*beta*delta_t)/2 + ((-3*beta*y0^2+2)*beta^2*delta_t^2)/6 + ((7*beta*y0^2-4)*beta^3*delta_t^3)/24
 eta3_3 = -((-beta*y0^2+3)*beta^2*y0*delta_t^(3/2))/6 - ((3*beta*y0^2-7)*beta^3*y0*delta_t^(5/2))/12
 eta4_3 = ((beta^2*y0^4-6*beta*y0^2+3)*beta^2*delta_t^2)/24 + ((-beta^2*y0^4+5*beta*y0^2-2)*beta^3*delta_t^3)/12
@@ -180,58 +180,40 @@ H4 = function(x) x^4 - 6*x^2 + 3
 H5 = function(x) x^5 - 10*x^3 + 15*x
 H6 = function(x) x^6 - 15*x^4 + 45*x^2 - 15
 
-# compute eta
 compute_eta = function(y_current, delta_t, beta, sigma) {
   eta = numeric(7)
-  
-  #eta, J=0, K=3
+  # J=0, K=3
   eta[1] = 1
   
   # eta, J=1, K=3
-  eta[2] = beta*y_current*delta_t^(1/2) - 
-    (1/2)*beta^2*y_current*delta_t^(3/2) + 
+  eta[2] = -beta*y_current*delta_t^(1/2) + 
+    (1/2)*beta^2*y_current*delta_t^(3/2) - 
     (1/6)*beta^3*y_current*delta_t^(5/2)
   
-  # eta, J=2, K=3
+  # J=2, K=3
   eta[3] = ((beta*y_current^2-1)*beta*delta_t)/2 + 
     ((-3*beta*y_current^2+2)*beta^2*delta_t^2)/6 + 
     ((7*beta*y_current^2-4)*beta^3*delta_t^3)/24
   
-  # eta, J=3, K=3
-  eta[4] = -((-beta*y_current^2+3)*beta^2*y_current*delta_t^(3/2))/6 - 
+  # J=3, K=3
+  eta[4] = ((-beta*y_current^2+3)*beta^2*y_current*delta_t^(3/2))/6 + 
     ((3*beta*y_current^2-7)*beta^3*y_current*delta_t^(5/2))/12
   
-  # eta, J=4, K=3
+  # J=4, K=3
   eta[5] = ((beta^2*y_current^4-6*beta*y_current^2+3)*beta^2*delta_t^2)/24 + 
     ((-beta^2*y_current^4+5*beta*y_current^2-2)*beta^3*delta_t^3)/12
   
-  # eta, J=5, K=3
-  eta[6] = -((-beta^2*y_current^4+10*beta*y_current^2-15)*beta^3*y_current*delta_t^(5/2))/120
+  # J=5, K=3
+  eta[6] = ((-beta^2*y_current^4+10*beta*y_current^2-15)*beta^3*y_current*delta_t^(5/2))/120
   
-  # eta, J=6, K=3
+  # J=6, K=3
   eta[7] = ((beta^3*y_current^6-15*beta^2*y_current^4-15+45*beta*y_current^2)*beta^3*delta_t^3)/720
   
   return(eta)
 }
 
 
-
-# hermite_density = function(x_current, y0, delta_t, beta, sigma, J){
-#   y = x_current / sigma
-#   z = (y - y0)/sqrt(delta_t)
-#   
-#   phi_z = exp(-z^2/2) / sqrt(2*pi)
-#   H_values = c(H0(z), H1(z), H2(z), H3(z), H4(z), H5(z), H6(z))
-#   eta = compute_eta(y_current=y0, delta_t=delta_t, beta=beta, sigma=sigma)
-#   sum_val = sum(eta[1:(J+1)] * H_values[1:(J+1)])
-#   
-#   p_z = phi_z * sum_val
-#   p_y = p_z / sqrt(delta_t)
-#   p_x = p_y / sigma
-#   return(p_x)
-# }
-
-
+# hermite density
 hermite_density = function(x_next, x_prev, delta_t, beta, sigma, J){
   y_next = x_next / sigma
   y_prev = x_prev / sigma  
@@ -253,6 +235,69 @@ hermite_density = function(x_next, x_prev, delta_t, beta, sigma, J){
 
 
 
+exact_density = function(x_next, x_prev, delta_t, beta, sigma) {
+  mu = x_prev * exp(-beta * delta_t)
+  var = sigma^2 * (1 - exp(-2 * beta * delta_t)) / (2 * beta)
+  dnorm(x_next, mean = mu, sd = sqrt(var))
+}
+
+library(ggplot2)
+
+x_prev = 0.5
+x_range = seq(-3, 3, length.out = 200)
+
+density_exact = sapply(x_range, function(x) {
+  exact_density(x, x_prev, delta_t, beta, sigma)
+})
+
+density_hermite_J1 = sapply(x_range, function(x) {
+  hermite_density(x, x_prev, delta_t, beta, sigma, J = 1)
+})
+
+density_hermite_J2 = sapply(x_range, function(x) {
+  hermite_density(x, x_prev, delta_t, beta, sigma, J = 2)
+})
+
+density_hermite_J3 = sapply(x_range, function(x) {
+  hermite_density(x, x_prev, delta_t, beta, sigma, J = 3)
+})
+
+df = data.frame(
+  x = rep(x_range, 4),
+  density = c(density_exact, density_hermite_J1, 
+              density_hermite_J2, density_hermite_J3),
+  method = rep(c("Exact", "J=1", "J=2", "J=3"), each = length(x_range))
+)
+
+ggplot(df, aes(x = x, y = density, color = method, linetype = method)) +
+  geom_line(linewidth = 1) +
+  labs(title = paste("Transition Density: x_prev =", x_prev, 
+                     ", delta_t =", delta_t),
+       x = "x_next", y = "Density") +
+  theme_minimal()
+
+errors = data.frame(
+  J = 1:3,
+  max_error = c(
+    max(abs(density_hermite_J1 - density_exact)),
+    max(abs(density_hermite_J2 - density_exact)),
+    max(abs(density_hermite_J3 - density_exact))
+  ),
+  mean_error = c(
+    mean(abs(density_hermite_J1 - density_exact)),
+    mean(abs(density_hermite_J2 - density_exact)),
+    mean(abs(density_hermite_J3 - density_exact))
+  )
+)
+
+print("Approximation Errors:")
+print(errors)
+
+
+
+
+
+
 # test
 x_next = 0.5
 
@@ -268,17 +313,3 @@ cat("exact density:", p_exact, "\n")
 cat("relative error:", abs(p_approx - p_exact) / p_exact * 100, "%\n")
 
 
-
-# exact path (for likelihood)
-simulate_path_exact = function(y0, beta, sigma, delta_t, n_steps) {
-  y_path = numeric(n_steps + 1)
-  y_path[1] = y0
-  
-  for(t in 2:(n_steps + 1)) {
-    mean_next = y_path[t-1] * exp(-beta * delta_t)
-    var_next = sigma^2 / (2*beta) * (1 - exp(-2*beta*delta_t))
-    y_path[t] = rnorm(1, mean = mean_next, sd = sqrt(var_next))
-  }
-  
-  return(y_path)
-}
